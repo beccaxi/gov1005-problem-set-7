@@ -1,0 +1,44 @@
+---
+title: "Problem Set 7"
+author: "Rebecca Xi"
+date: "4/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+
+## Question 1: Conduct exploratory data analysis
+
+### 1A) Summary Statistics
+
+### 1B) Visualizing a single variable
+
+### 1C) Bivariate Correlations
+
+### 1D) Plotting Bivariate relationships
+
+
+
+
+## Question 2: Run a single regression
+
+
+### 2A) Using lm()
+
+### 2B) Interpreting results
+
+### 2C) Regression and the Rubin Causal Model
+
+
+
+
+
+## Question 3: Generalize to many regressions
+
+
+
