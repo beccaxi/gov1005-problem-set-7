@@ -56,15 +56,52 @@ sen_rep_116 <- data %>%
 
 ```{r 1B, echo=FALSE}
 
-# Make a nice plot (histogram or bar chart) showing the distribution of
-# congressional ages. Feel free to be creative- maybe you want to show the
-# distribution by party or chamber. Remember, we’re using this process to
-# explore the data; try and make a plot that helps you understand it better.
-# Then, do the same for your outcome variable, nominate_percentile. Print both
-# plots here.
+# Here I create a histogram showing the distribution of congressional ages,
+# colored in by party (Democrat or Republican). I use the fill argument to
+# indicate party, since I am personally interested in seeing the distribution of
+# ages across parties (do Democrats or Republicans generally skew older?). I use
+# facet_wrap to wrap the data by House and by Senate so I get an age
+# distribution for each one, which is helpful in thinking about (1) the contrast
+# in age distributions, if any, between House and Senate,  and (2) the
+# distribution of Democrats and Republicans across House and Senate.
 
+age_plot <- sen_rep_116 %>% 
+  select(age, party, chamber) %>% 
+  ggplot(aes(x = age, fill = party)) +
+    geom_histogram(bins = 40) +
+    facet_wrap(vars(chamber)) +
+    labs(
+      title = "Distribution of Congressional Ages",
+      subtitle = "for Democrats and Republicans at the 116th Congress",
+      source = "Voteview: Congressional Roll-Call Votes Database",
+      x = "Age",
+      y = "Count"
+    ) +
+    scale_fill_manual(values = c("Democrat" = "blue", "Republican" = "red")) +
+    theme_classic()
+age_plot
+  
+# I copy-paste the above code here and modify for nominate_percentile. The goal
+# here is to be able to visualize the split between "liberals" and
+# "conservatives", which unsurprisingly corresponds to the split between
+# Democrats and Republicans. By eyeballing, I observe a slighter more liberal
+# House and a slightly more conservative Senate.
 
-
+nom_perc_plot <- sen_rep_116 %>% 
+  select(nominate_percentile, party, chamber) %>% 
+  ggplot(aes(x = nominate_percentile, fill = party)) +
+    geom_histogram(bins = 40) +
+    facet_wrap(vars(chamber)) +
+    labs(
+      title = "Distribution of Primary Dimension Outcomes",
+      subtitle = "for Democrats and Republicans at the 116th Congress",
+      source = "Voteview: Congressional Roll-Call Votes Database",
+      x = "Percentile Rank of Primary Dimension",
+      y = "Count"
+    ) +
+    scale_fill_manual(values = c("Democrat" = "blue", "Republican" = "red")) +
+    theme_classic()
+nom_perc_plot
 ```
 
 
