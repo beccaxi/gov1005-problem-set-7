@@ -8,7 +8,12 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(skimr)
 library(tidyverse)
+
+# Read in the data
+
+data <- read.csv('raw-data/HSall_members.csv')
 ```
 
 
@@ -16,7 +21,52 @@ library(tidyverse)
 
 ### 1A) Summary Statistics
 
+```{r 1A, echo=FALSE}
+
+# I create a tibble from the csv data, filtering for Senators (chamber ==
+# “Senate”) and Representatives (chamber == “House”) in the 116th Congress and
+# filtering out all independents (party_code == 328). I then create three new
+# variables: "party", which records either “Democrat” (party_code == 100) or
+# “Republican” (part_code == 200) using an efficient ifelse condition; "age",
+# which is 2019 (when the 116th Congress was sworn in) minus birth year; and
+# "nominate_percentile", which gives the percentile rank of nominate_dim1 using
+# the percent_rank() function.
+
+sen_rep_116 <- data %>% 
+  filter(
+    congress == 116, 
+    chamber == "Senate" | chamber == "House",
+    party_code != 328
+  ) %>% 
+  mutate(
+    party = ifelse(party_code == 100, "Democrat", "Republican"),
+    age = 2019 - born,
+    nominate_percentile = percent_rank(nominate_dim1)
+  )
+
+# Here I print the output of calling skim on the nominate_percentile and age
+# variables, as an alternative to summary
+
+ skim(sen_rep_116$nominate_percentile)
+ skim(sen_rep_116$age)
+```
+
+
 ### 1B) Visualizing a single variable
+
+```{r 1B, echo=FALSE}
+
+# Make a nice plot (histogram or bar chart) showing the distribution of
+# congressional ages. Feel free to be creative- maybe you want to show the
+# distribution by party or chamber. Remember, we’re using this process to
+# explore the data; try and make a plot that helps you understand it better.
+# Then, do the same for your outcome variable, nominate_percentile. Print both
+# plots here.
+
+
+
+```
+
 
 ### 1C) Bivariate Correlations
 
