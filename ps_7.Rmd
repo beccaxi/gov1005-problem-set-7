@@ -128,7 +128,7 @@ in the same direction).
 
 ### 1D) Plotting Bivariate relationships
 
-```{r 1D, echo=FALSE}
+```{r 1D, echo=FALSE, message=FALSE}
 
 # Here I create a scatterplot of the relationship between age and
 # nominate_percentile, coloring each point based on each member’s party. I use
@@ -158,6 +158,10 @@ plot <- sen_rep_116 %>%
       labels = c("Democrat", "Republican")
     ) +
     theme_classic()
+
+# Note: I set this code chunk to message=FALSE simply to hide a perfectly
+# innocuous informative message, that `geom_smooth()` using formula 'y ~ x'
+
 plot
 ```
 
@@ -172,7 +176,7 @@ plot
 # I first subset my previous dataset sen_rep_116to just include democrats
 # (party_code = 100). (I could just as well do this using party == "Democrat".)
 
-dem <- sen_rep_116 %>% 
+dem_116 <- sen_rep_116 %>% 
   filter(party_code == 100)
 
 # Now I run a linear regression of nominate_percentile on age using lm(). I then
@@ -180,7 +184,7 @@ dem <- sen_rep_116 %>%
 # conf.low, and conf.high. Finally, I print this tidied data in the form of a gt
 # table.
 
-dem_model <- dem %>% 
+dem_116_model <- dem_116 %>% 
   lm(nominate_percentile ~ age, data = .) %>% 
   tidy(conf.int = TRUE) %>% 
   select(term, estimate, conf.low, conf.high) %>% 
@@ -195,28 +199,91 @@ dem_model <- dem %>%
     conf.low = "Lower bound",
     conf.high = "Upper bound"
   )
-dem_model
+dem_116_model
 ```
 
 
 ### 2B) Interpreting results
 
-In one or two paragraphs (max 200 words), answer the following.
+The slope coefficient on age of -0.33 indicates that the average treatment 
+effect of increasing the age of a democratic member of Congress by 1 year is 
+-0.33. This means that aging one year has the effect, on a democratic member of 
+Congress, of decreasing that member's percentile rank for DW nominate scores by 
+about 0.33 percentiles. We should beware of interpreting the estimated 
+correlation as causal right away. There may be other reasons or even 
+*confounding variables* that affect the relationship between age and level of 
+conservatism. One such reason may be that a subset of the older democratic m
+embers of the 116th Congress were influenced by a common, more liberal political
+ideology, perhaps even in their youth, and that democratic ideology has become 
+relatively less liberal since.
 
-The slope coefficient on age of -0.33 indicates that the average treatment effect of increasing the age of a democratic member of Congress by 1 year is -0.33. This means that aging one year has the effect, on a democratic member of Congress, of decreasing that member's percentile rank for DW nominate scores by about 0.33 percentiles. 
-
-Give one reason we should not necessarily interpret the estimated correlation as causal. In other words, can you think of a reason that older democratic senators might be less conservative, that is not a direct effect of age?
-Why do we calculate a confidence interval around our average treatment effect?
-
+We calculate a confidence interval around the average treatment effect to 
+reflect the uncertainty that comes with estimation. Since the slope coefficient 
+in the linear regression is measured with some uncertainty, the estimate of 
+potential DW Nominate percentile outcome under the "treatment" of age is also 
+measured with some uncertainty, and we need to take that into consideration.
 
 
 ### 2C) Regression and the Rubin Causal Model
 
-
+The coefficient on military is equivalent to the average treatment effect (of 
+undergoing active military duty) on DW Nominate percentile rankings. It serves 
+as a way to quantify the difference in potential outcomes, between the potential
+outcome when a member does not undergo military duty and the potential outcome 
+when a member does go into the military. Randomization is necessary to support 
+this interpretation as causal: random assignment is the best way to infer an 
+average treatment effect, given a large enough sample size. 
 
 
 
 ## Question 3: Generalize to many regressions
+
+```{r 3, echo=FALSE}
+
+# Starting with the entire nominate dataset. I filter for democratic members
+# (party_code == 100) in either the Senate (chamber == “Senate”) or the House of
+# Representatives (chamber == “House”). I then (re)create my age and
+# nominate_percentile variables, updating the age variable from 1A to record the
+# difference between the year the congress began (starting in 1789, with
+# congress being held every 2 years) and the year the member was born. I then
+# use group_by(congress) and nest() to create a tibble of tibbles, with two
+# columns (congress and data) and 92 rows (for the 92 congresses). Each row of
+# the data column is a list with all the observations for a given congress.
+
+dem <- data %>% 
+  filter(
+    party_code == 100,
+    chamber == "Senate" | chamber == "House"
+  ) %>% 
+  mutate(
+    age = (1789 + 2 * congress) - born,
+    nominate_percentile = 100 * percent_rank(nominate_dim1)
+  ) %>% 
+  group_by(congress) %>% 
+  nest()
+
+# Now I create a column "mod", using map() to run lm() on the data in each row
+# of the dem tibble (specifically, on nominate_percentile and age, as before). I
+# have to be sure to map lm to data specifically, rather than on the congress
+# variable or something else, or the function will not be able to find
+# nominate_percentile and age. I then create another column "reg_results" which
+# uses map() again to tidy the results. Notably, I found
+# https://tidyr.tidyverse.org/articles/nest.html very helpful for mapping with
+# lm, tidy, and nested tibbles.
+
+dem <- dem %>% 
+  mutate(
+    mod = map(data, function(list) lm(nominate_percentile ~ age, data = list)),
+    reg_results = map(mod, function(list) tidy(list, conf.int = TRUE))
+  ) %>% 
+  select(congress, reg_results) 
+
+# Use map_dbl() to pull the estimate for age from each congress, as well as the standard error, which you can use to create an upper and lower column for the 95% confidence interval (see PPBDS 10.2.2 for help on the standard error method of calculating confidence intervals).
+
+
+
+```
+
 
 
 
