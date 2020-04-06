@@ -212,10 +212,10 @@ Congress, of decreasing that member's percentile rank for DW nominate scores by
 about 0.33 percentiles. We should beware of interpreting the estimated 
 correlation as causal right away. There may be other reasons or even 
 *confounding variables* that affect the relationship between age and level of 
-conservatism. One such reason may be that a subset of the older democratic m
-embers of the 116th Congress were influenced by a common, more liberal political
-ideology, perhaps even in their youth, and that democratic ideology has become 
-relatively less liberal since.
+conservatism. One such reason may be that a subset of the older democratic 
+members of the 116th Congress were influenced by a common, more liberal 
+political ideology, perhaps even in their youth, and that democratic ideology 
+has become relatively less liberal since.
 
 We calculate a confidence interval around the average treatment effect to 
 reflect the uncertainty that comes with estimation. Since the slope coefficient 
@@ -272,15 +272,47 @@ dem <- data %>%
 # lm, tidy, and nested tibbles. I then use map_dbl() to pull the estimate for
 # age from each congress and store it in coef, as well as the standard error
 # which I store in se. Finally, I use these two variables to create an "upper"
-# column and a "lower" column for the 95% confidence interval.
+# column and a "lower" column for the 95% confidence interval, using the
+# standard error method of calculating confidence intervals.
 
 dem <- dem %>% 
   mutate(
     mod = map(data, function(list) lm(nominate_percentile ~ age, data = list)),
-    reg_results = map(mod, function(list) tidy(list, conf.int = TRUE))
+    reg_results = map(mod, function(list) tidy(list, conf.int = TRUE)),
+    coef = map_dbl(
+      reg_results, 
+      ~ filter(., term == "age") %>% 
+        pull(estimate)
+    ),
+    se = map_dbl(
+      reg_results,
+      ~ filter(., term == "age") %>% 
+        pull(std.error)
+    ),
+    upper = coef + 1.96 * se,
+    lower = coef - 1.96 * se
   )
 
+# Lastly, I use the tibble to replicate the given plot. The x-axis indicates
+# which congress, and the y axis indicates the average treatment effect (coef)
+# of age on nominate_percentile for that congress. I use geom_errorbar(aes(x =
+# congress, ymin = lower, ymax = upper)) to produce the 95% confidence intervals
+# on the estimates. Finally, I color both the points and the error bars blue,
+# write appropriate titles and axis labels, and apply theme_classic() to mimic
+# the plot in the problem set instructions.
 
+dem_plot <- dem %>% 
+  ggplot(aes(x = congress, y = coef)) +
+    geom_point(color = "blue") + 
+    geom_errorbar(aes(x = congress, ymin = lower, ymax = upper), color = "blue") +
+    labs(
+      title = "Average Treatment Effect of Age on Conservativism\n Among Democrats Over Time",
+      subtitle = "Scores use DW Nominate Dimension 1\n 95% Confidence Interval",
+      x = "Congress",
+      y = "Estimate"
+    ) +
+    theme_classic()
+dem_plot
 ```
 
 
