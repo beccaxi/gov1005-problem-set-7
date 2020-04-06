@@ -265,21 +265,20 @@ dem <- data %>%
 # Now I create a column "mod", using map() to run lm() on the data in each row
 # of the dem tibble (specifically, on nominate_percentile and age, as before). I
 # have to be sure to map lm to data specifically, rather than on the congress
-# variable or something else, or the function will not be able to find
+# variable or something else, or else the function will not be able to find
 # nominate_percentile and age. I then create another column "reg_results" which
 # uses map() again to tidy the results. Notably, I found
 # https://tidyr.tidyverse.org/articles/nest.html very helpful for mapping with
-# lm, tidy, and nested tibbles.
+# lm, tidy, and nested tibbles. I then use map_dbl() to pull the estimate for
+# age from each congress and store it in coef, as well as the standard error
+# which I store in se. Finally, I use these two variables to create an "upper"
+# column and a "lower" column for the 95% confidence interval.
 
 dem <- dem %>% 
   mutate(
     mod = map(data, function(list) lm(nominate_percentile ~ age, data = list)),
     reg_results = map(mod, function(list) tidy(list, conf.int = TRUE))
-  ) %>% 
-  select(congress, reg_results) 
-
-# Use map_dbl() to pull the estimate for age from each congress, as well as the standard error, which you can use to create an upper and lower column for the 95% confidence interval (see PPBDS 10.2.2 for help on the standard error method of calculating confidence intervals).
-
+  )
 
 
 ```
