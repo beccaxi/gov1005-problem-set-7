@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(skimr)
+library(broom)
+library(gt)
 library(tidyverse)
 
 # Read in the data
@@ -30,7 +32,8 @@ data <- read.csv('raw-data/HSall_members.csv')
 # “Republican” (part_code == 200) using an efficient ifelse condition; "age",
 # which is 2019 (when the 116th Congress was sworn in) minus birth year; and
 # "nominate_percentile", which gives the percentile rank of nominate_dim1 using
-# the percent_rank() function.
+# the percent_rank() function. I multiply by 100 to get, say, a value of 50 (for
+# 50th percentile) rather than a value of 0.50.
 
 sen_rep_116 <- data %>% 
   filter(
@@ -41,7 +44,7 @@ sen_rep_116 <- data %>%
   mutate(
     party = ifelse(party_code == 100, "Democrat", "Republican"),
     age = 2019 - born,
-    nominate_percentile = percent_rank(nominate_dim1)
+    nominate_percentile = 100 * percent_rank(nominate_dim1)
   )
 
 # Here I print the output of calling skim on the nominate_percentile and age
@@ -93,10 +96,10 @@ nom_perc_plot <- sen_rep_116 %>%
     geom_histogram(bins = 40) +
     facet_wrap(vars(chamber)) +
     labs(
-      title = "Distribution of Primary Dimension Outcomes",
+      title = "Distribution of Outcomes",
       subtitle = "for Democrats and Republicans at the 116th Congress",
       source = "Voteview: Congressional Roll-Call Votes Database",
-      x = "Percentile Rank of Primary Dimension",
+      x = "Percentile Rank (DW Nominate)",
       y = "Count"
     ) +
     scale_fill_manual(values = c("Democrat" = "blue", "Republican" = "red")) +
@@ -107,17 +110,105 @@ nom_perc_plot
 
 ### 1C) Bivariate Correlations
 
+```{r 1C, echo=FALSE}
+
+# Here I calculate the correlation coefficient ("corr") for age and
+# nominate_percentile
+
+corr <- sen_rep_116 %>% 
+  summarize(corr = cor(age, nominate_percentile))
+corr
+```
+
+A negative correlation coefficient indicates a negative relationship (if one 
+variable increases, the value of the other decreases), while a positive 
+coefficient indicates a positive relationship (the values of both variables move
+in the same direction). 
+
+
 ### 1D) Plotting Bivariate relationships
 
+```{r 1D, echo=FALSE}
+
+# Here I create a scatterplot of the relationship between age and
+# nominate_percentile, coloring each point based on each member’s party. I use
+# geom_smooth(method = "glm")) to add a black “best fit” line, illustrating the
+# relationship between age and DW nominate percentile. I set se = FALSE to
+# remove the shading of the confidence interval around the line. I also add two
+# more best fit lines (using the additional argument color = party within aes(),
+# in order to split into parties for two lines) for the relationship within
+# parties, which we see is roughly similar to the best fit line overall.
+# Finally, I scale for desired color and to scale the y-axis by 100.
+
+plot <- sen_rep_116 %>% 
+  select(age, nominate_percentile, party) %>% 
+  ggplot(aes(x = age, y = nominate_percentile)) +
+    geom_point(aes(color = party)) +
+    geom_smooth(method = "glm", se = FALSE, color = "black") +
+    geom_smooth(method = "glm", se = FALSE, aes(color = party)) +
+    labs(
+      title = "Relationship between Age and DW Nominate Percentile",
+      subtitle = "Higher scores represent more conservative positions",
+      x = "Age",
+      y = "Percentile Rank (DW Nominate)"
+    ) +
+    scale_color_manual(
+      values = c("Democrat" = "blue", "Republican" = "red"),
+      name = "Party",
+      labels = c("Democrat", "Republican")
+    ) +
+    theme_classic()
+plot
+```
 
 
 
 ## Question 2: Run a single regression
 
-
 ### 2A) Using lm()
 
+```{r 2A, echo=FALSE}
+
+# I first subset my previous dataset sen_rep_116to just include democrats
+# (party_code = 100). (I could just as well do this using party == "Democrat".)
+
+dem <- sen_rep_116 %>% 
+  filter(party_code == 100)
+
+# Now I run a linear regression of nominate_percentile on age using lm(). I then
+# tidy up the data and select for the variables of interest: term, estimate,
+# conf.low, and conf.high. Finally, I print this tidied data in the form of a gt
+# table.
+
+dem_model <- dem %>% 
+  lm(nominate_percentile ~ age, data = .) %>% 
+  tidy(conf.int = TRUE) %>% 
+  select(term, estimate, conf.low, conf.high) %>% 
+  gt() %>% 
+  tab_header(
+    title = "Effect of Age on DW Nominate Percentile",
+    subtitle = "Higher percentile suggests more conservative"
+  ) %>% 
+  cols_label(
+    term = "Variable",
+    estimate = "Estimate",
+    conf.low = "Lower bound",
+    conf.high = "Upper bound"
+  )
+dem_model
+```
+
+
 ### 2B) Interpreting results
+
+In one or two paragraphs (max 200 words), answer the following.
+
+The slope coefficient on age of -0.33 indicates that the average treatment effect of increasing the age of a democratic member of Congress by 1 year is -0.33. This means that aging one year has the effect, on a democratic member of Congress, of decreasing that member's percentile rank for DW nominate scores by about 0.33 percentiles. 
+
+Give one reason we should not necessarily interpret the estimated correlation as causal. In other words, can you think of a reason that older democratic senators might be less conservative, that is not a direct effect of age?
+Why do we calculate a confidence interval around our average treatment effect?
+
+
 
 ### 2C) Regression and the Rubin Causal Model
 
@@ -126,6 +217,9 @@ nom_perc_plot
 
 
 ## Question 3: Generalize to many regressions
+
+
+
 
 
 
